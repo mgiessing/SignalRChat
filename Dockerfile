@@ -1,22 +1,22 @@
-#See https://aka.ms/containerfastmode to understand how Visual Studio uses this Dockerfile to build your images for faster debugging.
-
-FROM mcr.microsoft.com/dotnet/aspnet:6.0 AS base
+FROM registry.redhat.io/ubi8/dotnet-70 AS dotnet-70 
+#FROM quay.io/paulchapmanibm/ppc64le/dotnet-70 dotnet-70
 WORKDIR /app
-EXPOSE 80
+EXPOSE 8080
 EXPOSE 443
 
-FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
+FROM dotnet-70 AS build
 WORKDIR /src
-COPY ["SignalRChat/SignalRChat.csproj", "SignalRChat/"]
+COPY --chown=1001 ["SignalRChat/SignalRChat.csproj", "SignalRChat/"]
 RUN dotnet restore "SignalRChat/SignalRChat.csproj"
-COPY . .
+COPY --chown=1001 . ./
 WORKDIR "/src/SignalRChat"
+USER root
 RUN dotnet build "SignalRChat.csproj" -c Release -o /app/build
 
 FROM build AS publish
 RUN dotnet publish "SignalRChat.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
-FROM base AS final
+FROM dotnet-70 AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+COPY --chown=1001 --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "SignalRChat.dll"]
